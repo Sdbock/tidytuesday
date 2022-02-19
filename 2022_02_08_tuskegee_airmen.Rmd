@@ -119,7 +119,8 @@ data_combined <- with_page %>%
 
 # Finding patterns of sentiment in profiles
 
-I could calculate a sentiment score 
+I could plot sentiment scores as either continuous (heatmap) or categorical. 
+Going with categorical to better implmeent DuBois colors. 
 
 ```{r}
 

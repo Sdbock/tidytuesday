@@ -1,0 +1,200 @@
+---
+title: "Measuring sentiment in Tuskegee Airmen web profiles"
+date: 2022-02-08
+output: html_output
+---
+
+# TidyTuesday
+
+For this week's Tidy Tuesday, I wanted to take advantage of two cool features of this dataset: The geographic location (home state of pilots) and the web profiles available for select pilots. Looking through some of the profiles, I noticed that the experiences of the airmen described in the profiles varied drastically, and it would be neat to capture that variation somehow.  As such, I decided to 1) scrape the text from each available profile, 2) calculate a sentiment score for each profile, and then 3) compare the average sentiment across states.
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+## install pacman package if not already installed.
+if(!require(pacman)){
+  install.packages("pacman")
+}
+
+# devtools::install_github("vladmedenica/themedubois") ## install themedbuois package from github 
+
+pacman::p_load(tidyverse,tidytuesdayR,tidytext,scales,datasets,themedubois)
+
+```
+
+# Loading data
+
+```{r Load}
+
+tt <- tt_load("2022-02-08")
+
+data <- tt$airmen ##extracting data frame
+
+head(data)
+
+```
+
+# Analyzing web profiles
+
+First I'm going to see how to access correct information in web profiles. First need to limit data to observations that have web profiles. Then, I will test out the first observation to see how to correctly parse relevant text.
+
+```{r}
+library(rvest)
+
+## first grabbing first website to test
+site_test <-  data %>%
+  filter(!is.na(web_profile)) %>%
+    select(web_profile) %>%
+    slice(1) %>%
+    pull()
+
+## after poking around on the site with SelectorGadget, looks like the relevant html nodes is .elementor-widget-theme-post-content p. It does grab some extra text outside of the bios, but not sure how to fix this issue, given the site structure.
+
+site_test %>%
+  read_html() %>%
+  html_nodes(".elementor-widget-theme-post-content p") %>%
+  html_text2() %>%
+  str_c(collapse = "")
+```
+
+Nice! Assuming the structure of pages is consistent, I now know how to access the bios on each wage. However, there is some extra text tagged on the end that I don't want. I'm going to leave it in for now, as I don't think the words included in the extra text will affect sentiment too much.
+
+Now I need to iterate the process for each available web profile.
+
+
+```{r}
+
+## creating subset of data to only include rows with web pages
+with_page <- data %>%
+  filter(!is.na(web_profile)) 
+
+## first going to create helper function which I will use to iterate over each row in data
+get_text <- function(x) {
+  read_html(x) %>%
+  html_nodes(".elementor-widget-theme-post-content p") %>%
+  html_text2() %>%
+  str_c(collapse = "")
+}
+
+## now using map() to apply scraping function to each site
+
+bios <- with_page %>%
+  mutate(bio = map(web_profile, ~ get_text(.x)))
+  
+
+bios %>%
+  select(bio) %>%
+  slice(5) %>%
+  pull()
+```
+
+# Analyze text
+
+First I will tokenize bios into a tidytext format, with one word per row. I will then perform some typical text preprocessing, then calculate a sentiment score for each profile.
+
+```{r}
+
+tokens <-
+  bios %>%
+  unnest_tokens("word","bio", remove)
+
+sentiment_scores <- tokens %>%
+  anti_join(stop_words) %>%
+  inner_join(sentiments) %>%
+  count(name,sentiment) %>%
+    pivot_wider(names_from = "sentiment",
+              values_from = n,
+              values_fill = 0) %>%
+  mutate(positive_index = round(positive/(positive + negative),2)) ## measuring sentiment as proportion of positive/positive+negative words
+
+
+## now combining back with original data 
+
+data_combined <- with_page %>%
+  inner_join(sentiment_scores) 
+  
+
+```
+
+# Finding patterns of sentiment in profiles
+
+I could calculate a sentiment score 
+
+```{r}
+
+## first need to grab full names of states for creating map later
+state_info <- tibble("state" = state.abb, "state_name" = state.name)
+
+
+state_data <- data_combined %>%
+    group_by(state) %>%
+  summarize(
+    positive = mean(positive_index) ##taking average sentiment by state
+  ) %>%
+  right_join(state_info) %>%
+  select("state" = state_name, positive) %>%
+  mutate(state = tolower(state),
+         index = scales::rescale(positive), ## rescaling sentiment index for possible continuous outcome
+         terciles = factor(ntile(index,3), ## grouping index by terciles for categorical version
+                       levels = c(1, 2, 3),
+                       labels = c("Negative", "Neutral", "Positive"))
+         )
+
+
+states_map <- map_data("state") #%>%
+  #rename("state" = region) 
+```
+
+
+# Plotting map
+```{r}
+# colors taken from DuBois plot
+# red: #DF2645
+# yellow: #FAB500
+# green: #4C6C5A
+
+state_data  %>%
+  ggplot(aes(fill = terciles)) +
+  geom_map(aes(map_id = state), map = states_map) +
+  expand_limits(x = states_map$long, y = states_map$lat) +
+  #scale_fill_gradient(low = "#DF2645", high = "#FAB500", na.value = "light grey") + ## heatmap option
+  scale_fill_manual(values = c("#DF2645","#FAB500","#4C6C5A"),
+                    labels = c("Negative","Neutral","Positive", "Web profiles NA")) +
+  labs(
+    title = "Sentiment analysis of Tuskegee Airmen web profiles",
+    subtitle = "Map of average sentiment scores by state",
+    caption = "Figure by: Sean Bock\nData: Commemorative Air Force\n Git: https://github.com/Sdbock",
+    fill = "Sentiment score:",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_dubois() + ## adding dubois theme
+  theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    panel.border = element_blank(),
+    plot.title = element_text(size = 25),
+    plot.subtitle = element_text(size = 20, vjust = 10),
+    legend.text = element_text(size = 12),
+    legend.title = element_text(size = 15),
+    plot.caption = element_text(size = 15)
+  ) 
+
+
+```
+
+# Saving plot
+
+```{r}
+# saving plot in a "figures" folder
+ggsave(
+  filename = "figures/tidytuesday_2022_02_08.png",
+  device = "png",
+  width = 11,
+  height = 8.5)
+
+```

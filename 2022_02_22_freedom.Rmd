@@ -78,8 +78,8 @@ data %>%
     shape = guide_legend("Regional means")
   ) + 
   labs(
-    x = "Civil Liberties",
-    y = "Political Rights",
+    x = "Civil liberties index",
+    y = "Political rights index",
     title = "Contextualizing U.S. Democratic Backsliding",
     subtitle = str_wrap("Note: U.S. value indicated in red. Grey points (country observations) are jittered to avoid overlapping.",width = 40),
     caption = "\n Figure by: Sean Bock\n Data source: Freedom House and UN, provided by Arthur Cheib\n Git: https://github.com/Sdbock/tidytuesday "
@@ -115,6 +115,8 @@ data %>%
 # This will save your most recent plot
 ggsave(
   filename = "figures/2022_02_22_tidy_tuesday.png",
-  device = "png")
+  device = "png",
+  height = 8.5,
+  width = 11)
 
 ```

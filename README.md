@@ -7,7 +7,7 @@ This repo contains code used in occasional submissions to #tidytuesday.
 
 ## 2022-02-22 Freedom and U.N. Data
 
-![2022_02_22_tidy_tuesday](https://user-images.githubusercontent.com/35930477/155412469-ca270556-e680-4673-9b6a-6693aa57641c.png)
+![2022_02_22_tidy_tuesday](https://user-images.githubusercontent.com/35930477/155415370-fa9a6085-3636-4554-a039-9c0806fe8ec5.png)
 
 ## 2022-02-08 Tuskegee Airmen
 

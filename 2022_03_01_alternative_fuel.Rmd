@@ -128,6 +128,7 @@ counts %>%
   facet_wrap(~ decade, 
              strip.position = "bottom") +
   theme(
+    plot.background = element_rect(fill = "white), # controlling background color for git
     strip.background = element_rect(color = "white"),
     strip.text = element_text(face = "bold", size = 12),
     plot.title = element_text(size = 14, face = "bold"),

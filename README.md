@@ -7,7 +7,7 @@ This repo contains code used in occasional submissions to #tidytuesday.
 
 ## 2022-03-01 Alternative Fuel Stations
 
-![2022_03_01](https://user-images.githubusercontent.com/35930477/156896542-f6447ce8-35fc-4f4f-9052-4b0d368e5c01.png)
+![2022_03_01](https://user-images.githubusercontent.com/35930477/156896606-65a01635-c94c-4bf8-90c7-220b3624813d.png)
 
 ## 2022-02-22 Freedom and U.N. Data
 

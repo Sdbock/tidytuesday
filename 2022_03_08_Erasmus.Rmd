@@ -1,6 +1,6 @@
 ---
 title: "TidyTuesday"
-subttile: "Geonetwork of ERASMUS Exchange Program"
+subttile: "Geonetwork of Erasmus Exchange Program"
 date: 2022-03-08
 output: html_output
 ---
@@ -113,7 +113,7 @@ ggplot(data = world) +
              color = "Midnightblue") +
   guides(alpha = guide_legend(title = "Students")) +
   theme_void() +
-  labs(title = "Geonetwork of ERASMUS Exchange Program",
+  labs(title = "Geonetwork of Erasmus Exchange Program",
        caption = "Figure by: Sean Bock\nData: Data.Europa\nGit: https://github.com/Sdbock/tidytuesday") +
   theme(
     plot.margin = unit(c(0,.5,0,.5),"cm"),

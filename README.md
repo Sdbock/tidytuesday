@@ -5,6 +5,9 @@ This repo contains code used in occasional submissions to #tidytuesday.
 
 # Submission Figures
 
+## 022-03-08 ERASMUS Progam
+![2022_03_08](https://user-images.githubusercontent.com/35930477/157809738-ced39b67-4e35-449f-bc34-b4e39f52ca97.png)
+
 ## 2022-03-01 Alternative Fuel Stations
 
 ![2022_03_01](https://user-images.githubusercontent.com/35930477/156896606-65a01635-c94c-4bf8-90c7-220b3624813d.png)

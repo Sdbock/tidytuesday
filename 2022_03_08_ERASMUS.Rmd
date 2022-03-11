@@ -1,0 +1,140 @@
+---
+title: "TidyTuesday"
+subttile: "Geonetwork of ERASMUS Exchange Program"
+date: 2022-03-08
+output: html_output
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(tidytuesdayR, tidyverse, igraph)
+
+```
+
+# Loading data
+
+```{r Load}
+
+tt <- tt_load("2022-03-08")
+
+data <- tt$erasmus
+
+glimpse(data)
+
+```
+
+
+Wrangling data and creating network of student mobility.
+```{r}
+data_r <-
+data %>%
+  select(participants,
+         mobility_duration,
+         "from" = sending_country_code,
+         "to" = receiving_country_code,
+         )
+
+# creating network
+data_network <-
+data_r %>%
+  filter(mobility_duration >= 7) %>%
+  count(from, to, wt = participants, name = "n_students") %>%
+  filter(from != to) %>%
+  mutate(across(c("from","to"), countrycode::countrycode, ## getting full country names
+                  origin = "eurostat", destination = "country.name"))
+
+```
+
+
+```{r}
+url <- "https://raw.githubusercontent.com/albertyw/avenews/master/old/data/average-latitude-longitude-countries.csv"
+
+coords <- read_csv(url(url)) %>%
+  select(-1) %>%
+  filter(Country %in% data_network$from |
+           Country %in% data_network$to) %>%
+  rename(
+    "country" = Country,
+    "lat" = Latitude,
+    "lon" = Longitude  )
+
+head(coords)
+```
+
+## creating edges 
+
+```{r}
+edges <-
+data_network %>%
+  inner_join(coords, by = c("from" = "country")) %>%
+  rename(x = lon, y = lat) %>%
+  inner_join(coords, by = c("to" = "country")) %>%
+  rename(xend = lon, yend = lat)
+
+edges %>% 
+  add_count(from) %>%
+  add_count(to)
+
+node_size <-
+  edges %>%
+  select(from,to) %>%
+  pivot_longer(everything(), values_to = "country") %>%
+  count(country)
+
+nodes <-
+  coords %>%
+  inner_join(node_size)
+
+```
+
+## creating graph
+
+```{r}
+pacman::p_load(sf,rnaturalearth,rnaturalearthdata)
+# load data
+world <- ne_countries( returnclass = "sf")
+
+text <- str_wrap("This is the caption for my text", width = 1)
+
+ggplot(data = world) +
+  geom_sf(fill = "#746C70") +
+  labs( x = "Longitude", y = "Latitude") +
+  coord_sf(xlim = c(-10, 50), ylim = c(30,65), expand = TRUE) +
+  geom_point(data = nodes, aes(x = lon, y = lat),
+             size = log(nodes$n)/2,
+             color = "Midnightblue") +
+  geom_curve(data = edges %>% filter (n_students >=10), 
+             aes(x = x , y = y, xend = xend, yend = yend,     
+             alpha = n_students),
+             curvature = 0.33,
+             size = 1,
+             color = "Midnightblue") +
+  guides(alpha = guide_legend(title = "Students")) +
+  theme_void() +
+  labs(title = "Geonetwork of ERASMUS Exchange Program",
+       caption = "Figure by: Sean Bock\nData: Data.Europa\nGit: https://github.com/Sdbock/tidytuesday") +
+  theme(
+    plot.margin = unit(c(0,.5,0,.5),"cm"),
+    plot.caption = element_text(hjust = 0),
+    plot.title = element_text(size = 20, face = "bold",margin = margin(b = 12.5)),
+    legend.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 9),
+    plot.background = element_rect(fill = "#E2DED0", color = "#E2DED0"),
+    text = element_text(family = "Helvetica")
+  ) 
+  
+```
+# Saving Figure
+```{r}
+
+# This will save your most recent plot
+ggsave(
+  filename = "figures/2022_03_08.png",
+  device = "png",
+  dpi = "retina",
+  height = 7,
+  width = 8)
+
+```

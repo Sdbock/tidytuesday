@@ -26,7 +26,7 @@ glimpse(data)
 ```
 
 
-Wrangling data and creating network of student mobility.
+# Wrangling data and creating network of student mobility.
 ```{r}
 data_r <-
 data %>%
@@ -47,7 +47,7 @@ data_r %>%
 
 ```
 
-
+## getting country coordinates to use as network nodes
 ```{r}
 url <- "https://raw.githubusercontent.com/albertyw/avenews/master/old/data/average-latitude-longitude-countries.csv"
 

@@ -1,0 +1,119 @@
+---
+title: "Tidy Tuesday"
+subtitle: "Tidy packages on CRAN"
+date: 2022-03-16
+output: html_output
+---
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytuesdayR)
+
+```
+
+# Load the weekly Data
+
+Dowload the weekly data and make available in the `tt` object.
+
+```{r Load}
+
+tt <- tt_load("2022-03-15")
+
+cran <- tt$cran
+bioc <- tt$bioc
+
+```
+
+
+```{r}
+## cleaning up date variable
+cran_r <-
+  cran %>%
+  mutate(
+    date_clean = as.Date(date),
+    date_clean = if_else(
+      is.na(date_clean),
+      as.Date(date, format = "%c"), 
+      date_clean
+    )
+  ) %>%
+  filter(!is.na(date_clean)) %>% 
+  select(-date) %>%
+  rename(
+    date = date_clean
+  ) %>%
+  group_by(package) %>%
+  slice(1) %>%
+  select(package,date)
+
+
+counts_overall <-
+  cran_r %>%
+  arrange(date) %>%
+  ungroup() %>%
+  mutate(cumsum = row_number()) 
+
+counts_tidy <-
+  cran_r %>%
+  filter(str_detect(package,"tidy")) %>%
+  arrange(date) %>%
+  ungroup() %>%
+  mutate(cumsum = row_number()) 
+  
+
+```
+
+# Make plot
+
+```{r}
+library(scales)
+
+counts_overall %>%
+  ggplot(aes(x = date, y = cumsum)) +
+  geom_line(color = "grey", size = 1.5) +
+  scale_x_date(breaks = date_breaks("4 year"),
+             labels = date_format("%Y")) +
+  geom_line(data = counts_tidy, aes(x = date, y = cumsum), color = "#ccb144", size = 2) +
+  ggforce::facet_zoom(xlim = c(16200,19000), ylim = c(0,75), horizontal = FALSE, zoom.size = 3) +
+  labs(y = "Cumulative sum of packages",
+       x = NULL,
+       title = "Development of 'tidy' packages on CRAN",
+       subtitle = str_wrap("Top panel shows cumulative sum of all packages on CRAN. Zoomed panel (bottom, gold line) displays trends in packages that contain 'tidy' in name.", width = 50),
+       caption = "Figure: Sean Bock\nData: Robert Flight\nCode: https://github.com/Sdbock/tidytuesday") +
+  theme(
+    plot.background = element_rect(fill = "#3a3d72",color = "#3a3d72"),
+    panel.background = element_rect(fill = "#3a3d72",color = "#3a3d72"),
+    text = element_text(color = "white", family = "Helvetica"),
+    axis.text = element_text(color = "white"),
+    plot.title = element_text(size = 18),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(linetype = "dotted"),
+    axis.line.x = element_line(color = "white", size = .2),
+    axis.line.y = element_line(color = "white", size = .2),
+    axis.ticks = element_blank(),
+    plot.caption = element_text(hjust = 0)
+    
+    
+  )
+  
+```
+
+## Save plot
+
+```{r}
+
+ggsave(
+  filename = "figures/2022_03_15.png",
+  device = "png",
+  dpi = "retina",
+  height = 7,
+  width = 7
+  )
+
+```

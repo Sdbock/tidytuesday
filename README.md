@@ -5,6 +5,9 @@ This repo contains code used in occasional submissions to #tidytuesday.
 
 # Submission Figures
 
+## 2022_03_22 Birth names:: "Sean", "Shawn", or "Shaun"?
+
+![2022_03_22](https://user-images.githubusercontent.com/35930477/160201208-56df52d7-2d05-49e6-b86d-3cb8b6f7232a.png)
 
 ## 2022-03-15 "Tidy" packages on CRAN
 

@@ -1,0 +1,194 @@
+---
+title: "Tidy Tuesday"
+subtitle: "Collegiate Sport Inequality"
+date: 2022-03-29
+output: html_output
+---
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytuesdayR)
+
+```
+
+# Load the weekly Data
+
+
+```{r Load}
+
+tt <- tt_load("2022-03-29")
+
+```
+
+
+```{r Readme, eval = interactive()}
+
+tt
+
+```
+
+
+```{r}
+data <- 
+  tt$sports
+
+glimpse(data)
+```
+
+
+
+```{r}
+data_r <- 
+data %>%
+  select(sports, 
+         year, 
+         "school" = institution_name, 
+         state_cd, 
+         classification_name, 
+         ef_male_count, 
+         ef_female_count, 
+         ef_total_count,
+         starts_with(c("rev","partic","exp","total"))) 
+```
+
+Gonna get gap (men - women) in expenditures, normalized by student population size.
+```{r}
+ineqs <- 
+data_r %>%
+  group_by(school, year) %>%
+  filter(ef_male_count > 0 & ef_female_count > 0) %>% #removing single gender schools
+  mutate(ineq = sum(exp_men, na.rm = TRUE) - sum(exp_women, na.rm = TRUE),
+         ineq_norm = ineq/ef_total_count) %>%  #normalizing by student population
+  distinct(year, school, state_cd, ineq_norm) %>%
+  filter(!is.na(state_cd),
+         year == 2019) %>% 
+  group_by(state_cd) %>%
+  mutate(ineq_med = median(ineq_norm))
+  
+```
+
+# Median level of gender inequality in state expenditures across states
+
+```{r}
+(
+plot1 <- 
+ineqs %>%
+  ggplot(aes(x = reorder(state_cd, ineq_med), y = ineq_med)) +
+  #geom_point(color = "midnight blue", size = 5) +
+  geom_segment(aes(x = reorder(state_cd,ineq_med), xend = reorder(state_cd,ineq_med), y = 0, yend = ineq_med),
+               color = "light grey", size = 1.4) +
+  geom_point(color = "midnight blue", size = 4.5) +
+  scale_y_continuous(labels=scales::dollar_format()) +
+  coord_flip() +
+  labs(x = NULL,
+       y = "Median gap in expenditures (Men - Women) normalized by school size",
+       title = str_wrap("Median gender inequality in sport expenditures by state (2019)", width = 50)
+       )+
+  ggthemes::theme_clean(base_size = 18) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    plot.background = element_rect(color = "white"),
+    plot.title = element_text(face = "plain")
+  )
+)
+```
+
+# Predicting Trump Vote
+
+```{r}
+
+
+elections <- 
+  read_csv("extra_data/1976-2020-president.csv") %>%
+  filter(year == 2020,
+         party_simplified == "REPUBLICAN") %>%
+  mutate(vote_trump = candidatevotes/totalvotes) %>%
+  select(
+    "state_cd" = state_po,
+    vote_trump
+  )
+
+head(elections)
+```
+
+
+```{r}
+merged_data <-
+  ineqs %>% 
+   merge(elections)
+
+## fitting linear regression predicting Trump vote from  med gender inequality in sports expenditures at the state level
+R2 <-
+  merged_data %>%
+  lm(vote_trump ~ ineq_med, 
+     data = .) %>%
+  broom::glance() %>%
+  pull(r.squared) %>%
+  round(2)
+```
+
+
+```{r}
+(
+plot2 <- 
+ineqs %>%
+  merge(elections) %>%
+  ggplot(aes(x = ineq_med, y = vote_trump)) +
+  geom_jitter(color = "midnight blue", alpha = .4, size = 3) +
+  geom_smooth(method = "lm", 
+              se = FALSE,
+              color = "grey",
+              size = 1.4) +
+  ggthemes::theme_clean(base_size = 18) +
+  annotate("text", x = 500, y = .3,
+           label = "paste(italic(R) ^ 2, \" = .33\")", 
+           parse = TRUE,
+           size = 10) +
+  scale_x_continuous(labels = scales::dollar_format()) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    x = "Median gender gap in sports expenditures (2019)",
+    y = "State-level share of Trump vote",
+    title = str_wrap("Linear regression predicting 2020 Trump vote share from state-level median gender gap in sports expenditures",
+                     width = 50)
+  ) +
+  theme(plot.background = element_rect(color = "white"),
+        plot.title = element_text(face = "plain"))
+)
+  
+```
+
+
+```{r}
+library(patchwork)
+
+plot1 + plot2 +
+  plot_annotation(
+    title = str_wrap("States with higher levels of gender inequality in collegiate sports expenditures voted for Trump in 2020", width = 70),
+     caption = "Figure: Sean Bock\nData: Equity in Athletics Data. 2020 election data from the MIT Election Lab\nCode: https://github.com/Sdbock/tidytuesday",
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 30),
+      plot.caption = element_text(size = 15, hjust = 0)
+    )
+    )+
+  plot_layout(widths = c(1,1))
+  
+
+```
+
+# Saving figure
+
+```{r}
+# This will save your most recent plot
+ggsave(
+  filename = "figures/2022_03_29.png",
+  device = "png",
+  dpi = "retina",
+  height = 12,
+  width = 15)
+
+```

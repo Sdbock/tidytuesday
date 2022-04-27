@@ -1,0 +1,166 @@
+---
+title: "TidyTemplate"
+subtitle: "Birth names: Which is the best Sean?"
+date: 2022-03-24
+output: html_output
+---
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytuesdayR)
+
+```
+
+
+```{r Load}
+
+tt <- tt_load("2022-03-22")
+
+data <-
+  tt$babynames
+
+```
+
+
+```{r}
+
+lifetables <- tt$lifetables
+
+lifetables <-
+  lifetables %>%
+  filter(x == 0,
+         sex == "M") %>%
+  select(ex, year)
+
+
+seans <- 
+  data %>%
+  filter(name %in% c("Sean","Shawn","Shaun"),
+         sex == "M") %>%
+  select(year,name,n, prop) 
+
+seans_exp <-
+  seans %>%
+  left_join(lifetables) %>%
+  ungroup() %>%
+  mutate(ex = imputeTS::na.interpolation(ex), ## imputing missing life expectancies with interpolatation
+         exp_death = round(year + ex, 0)) 
+    
+deaths <-
+seans_exp %>%
+  select(name,n,exp_death) %>%
+  rename(
+    "deaths" = n,
+    "year" = exp_death
+  ) 
+
+```
+
+```{r}
+(
+plot1 <-
+seans_exp %>%
+  left_join(deaths) %>%
+  tidyr::replace_na(list(deaths = 0)) %>%
+  group_by(name) %>%
+  nest() %>%
+mutate(cumsum = map(data, ~cumsum(.$n)),
+       net = map(data, ~cumsum(.$n - .$deaths))) %>%
+  unnest(data,net,cumsum) %>%
+  select(name, year, net) %>%
+  ggplot(aes(x = year, y = net, fill = fct_relevel(name,c("Sean","Shawn","Shaun")))) + 
+  geom_area(alpha= .7) +
+  labs(
+    y = "Estimated Net Cumulative Sum of Names",
+    x = NULL
+  ) +
+  scale_fill_manual(values = c("#FE6FA9","#10EE63","#FF931F"), name = NULL ) +
+  scale_y_continuous(labels = scales::unit_format(unit = "M", scale = 1e-3)) +
+  theme(
+    plot.background = element_rect(fill = "#041A2D",color = "#041A2D" ),
+    panel.background = element_rect(fill = "#041A2D",color = "#041A2D" ),
+    text = element_text(family = "Helvetica",
+                        color = "white"),
+    legend.background = element_rect(fill = "#041A2D",color = "#041A2D" ),
+    legend.key = element_blank(),
+    legend.text = element_text(family = "Helvetica",
+                        color = "white"),
+    axis.text = element_text(family = "Helvetica",
+                        color = "white"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(size = .1)
+  )
+) 
+
+```
+
+# Figure of name popularity
+
+
+```{r}
+(
+plot2 <-
+seans %>%
+  ggplot(aes(x = year, y = prop, color = fct_relevel(name,c("Sean","Shawn","Shaun")))) + 
+  geom_line(size = 1.5) +
+  scale_color_manual(values = c("#FE6FA9","#10EE63","#FF931F"), name = NULL ) +
+  labs(
+    y = "Proportion of all birth names",
+    x = NULL
+  ) +
+  #scale_y_continuous(labels = scales::unit_format(unit = "M", scale = 1e-3)) +
+  theme(
+    plot.background = element_rect(fill = "#041A2D",color = "#041A2D" ),
+    panel.background = element_rect(fill = "#041A2D",color = "#041A2D" ),
+    legend.background = element_rect(fill = "#041A2D",color = "#041A2D" ),
+    legend.key = element_blank(),
+    legend.text = element_text(family = "Helvetica",
+                        color = "white"),
+    text = element_text(family = "Helvetica",
+                        color = "white"),
+    axis.text = element_text(family = "Helvetica",
+                        color = "white"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(size = .1)
+  )
+)
+```
+```{r}
+# I accidentally deleted code before saving, so figure text placement and size isn't exactly the same as figure that appears on github page.
+
+library(patchwork)
+
+plot1 / plot2 +
+  plot_annotation(
+    title = str_wrap("Which is the dominate spelling? Top panel examines trends in the popularity of each spelling of 'Sean'. 'Shawn' took an early lead but was soon surpassed by the superior 'Sean'. Nevermind 'Shaun'. Bottom panel uses life expactancies over time to estimate the number of living 'Sean's, 'Shawn's, and 'Shaun's in a given year. This plot clearly demonstrates the increasing dominance of 'Sean'.",width = 75),
+    caption = "Figure: Sean Bock\nData: birthnames dataset\nCode: https://github.com/Sdbock/tidytuesday"
+  ) &
+  theme(
+    plot.background = element_rect(fill = "#041A2D",color = "#041A2D" ),
+    panel.background = element_rect(fill = "#041A2D",color = "#041A2D" ),
+    plot.caption = element_text(hjust = 0, size = 15, color = "white"),
+    plot.title = element_text(color = "white", size = 22),
+    text = element_text(family = "Helvetica", size = 15)
+    
+  )
+
+```
+
+
+
+# Saving data
+```{r}
+
+# This will save your most recent plot
+ggsave(
+  filename = "figures/2022_03_22.png",
+  device = "png",
+  dpi = "retina",
+  height = 17,
+  width = 12)
+
+```

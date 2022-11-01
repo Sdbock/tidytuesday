@@ -5,6 +5,10 @@ This repo contains code used in occasional submissions to #tidytuesday.
 
 # Submission Figures
 
+## 2022_10_18 What's the scariest season of Stranger Things?
+
+![strangerthings](https://user-images.githubusercontent.com/35930477/199273497-c78224ee-0ec6-4111-b69f-928124381552.png)
+
 ## 2022_03_29 Gender inequities in collegiate sports spending
 
 ![2022_03_29](https://user-images.githubusercontent.com/35930477/161356915-68c24204-7373-4031-8f8d-293d15a72b91.png)
